@@ -1,5 +1,6 @@
 import HubTrafficAdapter from './HubTrafficAdapter'
 
+const androidUA = 'Mozilla/5.0 (Linux; Android 8.0.0; TA-1053 Build/OPR1.170623.026) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3368.0 Mobile Safari/537.36'
 
 class SpankWire extends HubTrafficAdapter {
   static DISPLAY_NAME = 'SpankWire'
@@ -13,42 +14,64 @@ class SpankWire extends HubTrafficAdapter {
     return `https://www.spankwire.com/EmbedPlayer.aspx?ArticleId=${id}`
   }
 
-  _extractStreamsFromEmbed(body) {
+  async _getStreams(type, id) {
+    const fromUrl = `https://www.spankwire.com/a/video${id}/`
+    // android user agent results in a much smaller page size
+    let { body } = await this.httpClient.request(fromUrl, { headers: { 'user-agent': androidUA } })
+
     /* eslint-disable max-len */
-    // URL examples:
-    // \/\/cdn1-embed-spankwire.spankcdn.net\/201505\/13\/1812784\/180P_200k_1812784.mp4?validfrom=1524836136&validto=1524843336&rate=45k&burst=450k&hash=djplLdzje8I9RZWDeUa8EtjK4mw%3D
-    // \/\/cdn1-embed-extremetube.spankcdn.net\/media\/\/201804\/29\/24260991\/mp4_720p_24260991.mp4?validfrom=1524996113&validto=1525003313&rate=141k&burst=2000k&hash=8lag09lM%2BHc%2F%2Frgi4Kcc6gObcr4%3D
-    // \/\/cdn1-embed-extremetube.spankcdn.net\/media\/\/201804\/29\/24260991\/mp4_normal_24260991.mp4?validfrom=1524996113&validto=1525003313&rate=34k&burst=2000k&hash=d3lzXN0Tx0e9%2BId7wp%2Bf1T8Momo%3D
+    // URL example:
+    // https://cdn1-mobile-spankwire.spankcdn.net/201811/26/25065251/mp4_720p_25065251.mp4?validfrom=1548762876&validto=1548791676&rate=531k&burst=1300k&hash=g8xUTRCfFKKbphgNZQK9VyXRWlw%3D
+    let regexp = /videoUrl_hd["']?\s*:\s*["']?(https?:\\?\/\\?\/[^.]+\.spankcdn\.net[^"']+)/gi
     /* eslint-enable max-len */
+    let urlMatches = regexp.exec(body)
 
-    let urlRegexp = /playerData.cdnPath\d+\s*=\s*["']?[^"'\s]+["']/gi
-    let urlMatches = body.match(urlRegexp)
+    let title = 'HD'
 
-    if (!urlMatches || !urlMatches.length) {
-      throw new Error('Unable to extract streams from an embed page')
+    if (!urlMatches || !urlMatches[1]) {
+      // use sd version if hd is unavailable
+      regexp = /videoUrl_sd["']?\s*:\s*["']?(https?:\\?\/\\?\/[^.]+\.spankcdn\.net[^"']+)/gi
+      urlMatches = regexp.exec(body)
+
+      if (!urlMatches || !urlMatches[1]) {
+        throw new Error('Unable to extract a stream URL from an android page')
+      } else {
+        title = 'SD'
+      }
+
     }
 
-    return urlMatches.map((item) => {
-      let url = item
-        .match(/["']([^"'\s]+)["']/i)[1] // Extract the URL
-        .replace(/\\/g, '') // Remove backslashes
+    let url = urlMatches[1]
+      .replace(/[\\/]+/g, '/') // Normalize the slashes...
+      .replace(/(https?:\/)/, '$1/') // ...but keep the // after "https:"
 
-      if (url[0] === '/') {
-        url = `https:${url}`
+    if (url[0] === '/') {
+      url = `https:/${url}`
+    }
+
+    const qualities = ['1080', '720', '480', '360', '240']
+
+    const found = qualities.some(qual => {
+      if (url.includes('_'+qual+'p_')) {
+        title += ' ' + qual + 'p'
+        return true
       }
-
-      // Two possible quality formats: "720p" and "high"
-      let qualityMatch = url.match(/\/(mp4_)?(\d+p|low|normal|high|ultra)/i)
-      let quality
-
-      if (qualityMatch && qualityMatch[2]) {
-        quality = qualityMatch[2]
-        quality = quality[0].toUpperCase() + quality.slice(1).toLowerCase()
-      }
-
-      return { url, quality }
     })
+
+    if (!found) {
+      const altQualities = ['high', 'ultra']
+
+      altQualities.some(qual => {
+        if (url.includes('_'+qual+'_')) {
+          title += ' ' + qual.toUpperCase()
+          return true
+        }
+      })
+    }
+
+    return [{ title, url }]
   }
+
 }
 
 
