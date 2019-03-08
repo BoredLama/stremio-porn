@@ -21,16 +21,14 @@ class HubTrafficAdapter extends BaseAdapter {
       type: 'movie',
       id: video.video_id || video.id,
       name: video.title.trim(),
-      genre: tags,
-      banner: video.thumb,
+      genres: tags,
+      background: video.thumb,
       poster: video.thumb,
       posterShape: 'landscape',
-      year: video.publish_date && video.publish_date.split('-')[0],
+      releaseInfo: video.publish_date && video.publish_date.split('-')[0],
       website: video.url,
       description: video.url,
-      runtime: video.duration,
-      popularity: Number(video.views),
-      isFree: 1,
+      runtime: video.duration
     })
   }
 
