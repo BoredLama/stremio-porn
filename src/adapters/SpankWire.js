@@ -42,8 +42,7 @@ class SpankWire extends HubTrafficAdapter {
     }
 
     let url = urlMatches[1]
-      .replace(/[\\/]+/g, '/') // Normalize the slashes...
-      .replace(/(https?:\/)/, '$1/') // ...but keep the // after "https:"
+      .replace('-mobile-', '-public-') // works without this too
 
     if (url[0] === '/') {
       url = `https:/${url}`
