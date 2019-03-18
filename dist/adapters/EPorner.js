@@ -206,7 +206,7 @@ class EPorner extends _BaseAdapter.default {
 
 }
 
-_defineProperty(_defineProperty(_defineProperty(EPorner, "DISPLAY_NAME", 'EPorner'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE);
+_defineProperty(_defineProperty(_defineProperty(_defineProperty(EPorner, "DISPLAY_NAME", 'EPorner'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE), "GENRES", []);
 
 var _default = EPorner;
 exports.default = _default;

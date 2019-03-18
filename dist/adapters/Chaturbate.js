@@ -159,7 +159,7 @@ class Chaturbate extends _BaseAdapter.default {
 
 }
 
-_defineProperty(_defineProperty(_defineProperty(Chaturbate, "DISPLAY_NAME", 'Chaturbate'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE);
+_defineProperty(_defineProperty(_defineProperty(_defineProperty(Chaturbate, "DISPLAY_NAME", 'Chaturbate'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE), "GENRES", []);
 
 var _default = Chaturbate;
 exports.default = _default;
