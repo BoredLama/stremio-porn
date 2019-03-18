@@ -34,48 +34,29 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 // EPorner has restricted video downloads to 30 per day per guest
 // import EPorner from './adapters/EPorner'
 const ID = 'porn_id';
-const SORT_PROP_PREFIX = 'popularities.porn.';
 const CACHE_PREFIX = 'stremio-porn|'; // Making multiple requests to multiple adapters for different types
 // and then aggregating them is a lot of work,
 // so we only support 1 adapter per request for now.
 
-const MAX_ADAPTERS_PER_REQUEST = 1;
 const ADAPTERS = [_PornHub.default, _RedTube.default, _YouPorn.default, _SpankWire.default, _PornCom.default, _Chaturbate.default];
-const SORTS = ADAPTERS.map(({
+const CATALOGS = ADAPTERS.map(({
   name,
   DISPLAY_NAME,
-  SUPPORTED_TYPES
-}) => ({
-  name: `Porn: ${DISPLAY_NAME}`,
-  prop: `${SORT_PROP_PREFIX}${name}`,
-  types: SUPPORTED_TYPES
-}));
-const METHODS = {
-  'stream.find': {
-    adapterMethod: 'getStreams',
-    cacheTtl: 300,
-    idProp: ID,
-    expectsArray: true
-  },
-  'meta.find': {
-    adapterMethod: 'find',
-    cacheTtl: 300,
-    idProp: 'id',
-    expectsArray: true
-  },
-  'meta.search': {
-    adapterMethod: 'find',
-    cacheTtl: 3600,
-    idProp: 'id',
-    expectsArray: true
-  },
-  'meta.get': {
-    adapterMethod: 'getItem',
-    cacheTtl: 300,
-    idProp: 'id',
-    expectsArray: false
-  }
-};
+  SUPPORTED_TYPES,
+  GENRES
+}) => {
+  return SUPPORTED_TYPES.map(type => ({
+    type,
+    id: makePornId(name, type, 'top'),
+    name: `Porn: ${DISPLAY_NAME}`,
+    genres: GENRES,
+    extra: [{
+      name: 'search'
+    }, {
+      name: 'genre'
+    }]
+  }));
+}).reduce((a, b) => a.concat(b), []);
 
 function makePornId(adapter, type, id) {
   return `${ID}:${adapter}-${type}-${id}`;
@@ -90,70 +71,14 @@ function parsePornId(pornId) {
   };
 }
 
-function normalizeRequest(request) {
-  let {
-    query,
-    sort,
-    limit,
-    skip
-  } = request;
-  let adapters = [];
-
-  if (sort) {
-    adapters = Object.keys(sort).filter(p => p.startsWith(SORT_PROP_PREFIX)).map(p => p.slice(SORT_PROP_PREFIX.length));
-  }
-
-  if (typeof query === 'string') {
-    query = {
-      search: query
-    };
-  } else if (query) {
-    query = _objectSpread({}, query);
-  } else {
-    query = {};
-  }
-
-  if (query.porn_id) {
-    let {
-      adapter,
-      type,
-      id
-    } = parsePornId(query.porn_id);
-
-    if (type && query.type && type !== query.type) {
-      throw new Error(`Request query and porn_id types do not match (${type}, ${query.type})`);
-    }
-
-    if (adapters.length && !adapters.includes(adapter)) {
-      throw new Error(`Request sort and porn_id adapters do not match (${adapter})`);
-    }
-
-    adapters = [adapter];
-    query.type = type;
-    query.id = id;
-  }
-
-  return {
-    query,
-    adapters,
-    skip,
-    limit
-  };
-}
-
-function normalizeResult(adapter, item, idProp = 'id') {
+function normalizeResult(adapter, item) {
   let newItem = _objectSpread({}, item);
 
-  newItem[idProp] = makePornId(adapter.constructor.name, item.type, item.id);
-  return newItem;
-}
+  if (item.id) {
+    newItem.id = makePornId(adapter.constructor.name, item.type, item.id);
+  }
 
-function mergeResults(results) {
-  // TODO: limit
-  return results.reduce((results, adapterResults) => {
-    results.push(...adapterResults);
-    return results;
-  }, []);
+  return newItem;
 }
 
 class PornClient {
@@ -173,21 +98,11 @@ class PornClient {
     }
   }
 
-  _getAdaptersForRequest(request) {
-    let {
-      query,
-      adapters
-    } = request;
-    let {
-      type
-    } = query;
+  _getAdapterForRequest(adapterName, type) {
     let matchingAdapters = this.adapters;
-
-    if (adapters.length) {
-      matchingAdapters = matchingAdapters.filter(adapter => {
-        return adapters.includes(adapter.constructor.name);
-      });
-    }
+    matchingAdapters = matchingAdapters.filter(adapter => {
+      return adapterName === adapter.constructor.name;
+    });
 
     if (type) {
       matchingAdapters = matchingAdapters.filter(adapter => {
@@ -195,84 +110,113 @@ class PornClient {
       });
     }
 
-    return matchingAdapters.slice(0, MAX_ADAPTERS_PER_REQUEST);
+    return matchingAdapters[0];
   }
 
-  _invokeAdapterMethod(adapter, method, request, idProp) {
+  _invokeAdapterMethod(adapter, method, request) {
     return _asyncToGenerator(function* () {
+      console.log('adapter: ');
+      console.log(adapter);
+      console.log('method: ' + method);
+      console.log('request: ');
+      console.log(request);
       let results = yield adapter[method](request);
       return results.map(result => {
-        return normalizeResult(adapter, result, idProp);
+        return normalizeResult(adapter, result);
       });
     })();
   } // Aggregate method that dispatches requests to matching adapters
 
 
-  _invokeMethod(methodName, rawRequest, idProp) {
+  _retrieveResource(resourceName, args) {
     var _this = this;
 
     return _asyncToGenerator(function* () {
-      let request = normalizeRequest(rawRequest);
+      let {
+        adapter,
+        id
+      } = parsePornId(args.id);
+      let request = {
+        query: {
+          type: args.type,
+          id
+        }
+      };
 
-      let adapters = _this._getAdaptersForRequest(request);
+      if (!isNaN(args.extra.skip)) {
+        request.skip = parseInt(args.extra.skip, 10);
+      }
 
-      if (!adapters.length) {
+      if (args.extra.search) {
+        request.query.search = args.extra.search;
+      }
+
+      if (args.extra.genre) {
+        request.query.genre = args.extra.genre;
+      }
+
+      let adapterImpl = _this._getAdapterForRequest(adapter, args.type);
+
+      if (!adapterImpl) {
         throw new Error('Couldn\'t find suitable adapters for a request');
       }
 
-      let results = [];
-
-      for (let adapter of adapters) {
-        let adapterResults = yield _this._invokeAdapterMethod(adapter, methodName, request, idProp);
-        results.push(adapterResults);
+      if (resourceName === 'catalog') {
+        return {
+          metas: yield _this._invokeAdapterMethod(adapterImpl, 'find', request)
+        };
+      } else if (resourceName === 'meta') {
+        return {
+          meta: (yield _this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0]
+        };
+      } else if (resourceName === 'stream') {
+        return {
+          streams: yield _this._invokeAdapterMethod(adapterImpl, 'getStreams', request)
+        };
+      } else {
+        throw new Error(`Invalid resourceName: ${resourceName}`);
       }
-
-      return mergeResults(results, request.limit);
     })();
   } // This is a public wrapper around the private method
   // that implements caching and result normalization
 
 
-  invokeMethod(methodName, rawRequest) {
+  invokeResource(resourceName, args) {
     var _this2 = this;
 
     return _asyncToGenerator(function* () {
-      let {
-        adapterMethod,
-        cacheTtl,
-        idProp,
-        expectsArray
-      } = METHODS[methodName];
-
-      let invokeMethod =
+      let invokeResource =
       /*#__PURE__*/
       function () {
         var _ref = _asyncToGenerator(function* () {
-          let result = yield _this2._invokeMethod(adapterMethod, rawRequest, idProp);
-          result = expectsArray ? result : result[0];
-          return result;
+          return _this2._retrieveResource(resourceName, args);
         });
 
-        return function invokeMethod() {
+        return function invokeResource() {
           return _ref.apply(this, arguments);
         };
       }();
 
       if (_this2.cache) {
-        let cacheKey = CACHE_PREFIX + JSON.stringify(rawRequest);
+        // @TODO more for search
+        let cacheTtl = 300;
+        let cacheKey = CACHE_PREFIX + JSON.stringify({
+          resourceName,
+          args
+        });
         let cacheOptions = {
           ttl: cacheTtl
         };
-        return _this2.cache.wrap(cacheKey, invokeMethod, cacheOptions);
+        return _this2.cache.wrap(cacheKey, invokeResource, cacheOptions);
       } else {
-        return invokeMethod();
+        return invokeResource();
       }
     })();
   }
 
 }
 
-_defineProperty(_defineProperty(_defineProperty(PornClient, "ID", ID), "ADAPTERS", ADAPTERS), "SORTS", SORTS);
+_defineProperty(_defineProperty(_defineProperty(PornClient, "ID", ID), "ADAPTERS", ADAPTERS), "CATALOGS", CATALOGS);
 
 var _default = PornClient;
 exports.default = _default;

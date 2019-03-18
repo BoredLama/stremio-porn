@@ -7,7 +7,7 @@ exports.default = void 0;
 
 var _http = _interopRequireDefault(require("http"));
 
-var _stremioAddons = _interopRequireDefault(require("stremio-addons"));
+var _stremioAddonSdk = require("stremio-addon-sdk");
 
 var _serveStatic = _interopRequireDefault(require("serve-static"));
 
@@ -21,11 +21,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } } function _next(value) { step("next", value); } function _throw(err) { step("throw", err); } _next(); }); }; }
 
-const SUPPORTED_METHODS = ['stream.find', 'meta.find', 'meta.search', 'meta.get'];
+// @TODO adapt methods (stream.find, meta.find, ...)
+// @TODO serveStatic not needed
+// @TODO search
+// @TODO landing
 const STATIC_DIR = 'static';
 const DEFAULT_ID = 'stremio_porn';
 const ID = process.env.STREMIO_PORN_ID || DEFAULT_ID;
-const ENDPOINT = process.env.STREMIO_PORN_ENDPOINT || 'http://localhost';
+const ENDPOINT = process.env.STREMIO_PORN_ENDPOINT || 'https://stremio-porn.now.sh';
 const PORT = process.env.STREMIO_PORN_PORT || process.env.PORT || '80';
 const PROXY = process.env.STREMIO_PORN_PROXY || process.env.HTTPS_PROXY;
 const CACHE = process.env.STREMIO_PORN_CACHE || process.env.REDIS_URL || '1';
@@ -41,89 +44,75 @@ if (IS_PROD && ID === DEFAULT_ID) {
 let availableSites = _PornClient.default.ADAPTERS.map(a => a.DISPLAY_NAME).join(', ');
 
 const MANIFEST = {
-  name: 'Porn',
+  name: 'Porn+',
   id: ID,
   version: _package.default.version,
   description: `\
 Time to unsheathe your sword! \
 Watch porn videos and webcam streams from ${availableSites}\
 `,
+  resources: ['catalog', 'meta', 'stream'],
   types: ['movie', 'tv'],
-  idProperty: _PornClient.default.ID,
-  dontAnnounce: !IS_PROD,
-  sorts: _PornClient.default.SORTS,
-  // The docs mention `contactEmail`, but the template uses `email`
-  email: EMAIL,
+  idPrefixes: [_PornClient.default.ID],
+  catalogs: _PornClient.default.CATALOGS,
   contactEmail: EMAIL,
-  endpoint: `${ENDPOINT}/stremioget/stremio/v1`,
   logo: `${ENDPOINT}/logo.png`,
   icon: `${ENDPOINT}/logo.png`,
   background: `${ENDPOINT}/bg.jpg`,
-  // OBSOLETE: used in pre-4.0 stremio instead of idProperty/types
-  filter: {
-    [`query.${_PornClient.default.ID}`]: {
-      $exists: true
-    },
-    'query.type': {
-      $in: ['movie', 'tv']
-    }
+  behaviorHints: {
+    adult: true
   }
 };
 
-function makeMethod(client, methodName) {
+function makeResourceHandler(client, resourceName) {
   return (
     /*#__PURE__*/
     function () {
-      var _ref = _asyncToGenerator(function* (request, cb) {
-        let response;
-        let error;
-
+      var _ref = _asyncToGenerator(function* (args) {
         try {
-          response = yield client.invokeMethod(methodName, request);
+          let response = yield client.invokeResource(resourceName, args);
+          return response;
         } catch (err) {
-          error = err;
           /* eslint-disable no-console */
-
           console.error( // eslint-disable-next-line prefer-template
-          _chalk.default.gray(new Date().toLocaleString()) + ' An error has occurred while processing ' + `the following request to ${methodName}:`);
-          console.error(request);
+          _chalk.default.gray(new Date().toLocaleString()) + ' An error has occurred while processing ' + `the following request to ${resourceName}:`);
+          console.error(args);
           console.error(err);
           /* eslint-enable no-console */
-        }
 
-        cb(error, response);
+          throw err;
+        }
       });
 
-      return function (_x, _x2) {
+      return function (_x) {
         return _ref.apply(this, arguments);
       };
     }()
   );
 }
 
-function makeMethods(client, methodNames) {
-  return methodNames.reduce((methods, methodName) => {
-    methods[methodName] = makeMethod(client, methodName);
-    return methods;
-  }, {});
-}
-
 let client = new _PornClient.default({
   proxy: PROXY,
   cache: CACHE
 });
-let methods = makeMethods(client, SUPPORTED_METHODS);
-let addon = new _stremioAddons.default.Server(methods, MANIFEST);
+let addon = new _stremioAddonSdk.addonBuilder(MANIFEST).defineCatalogHandler(makeResourceHandler(client, 'catalog')).defineMetaHandler(makeResourceHandler(client, 'meta')).defineStreamHandler(makeResourceHandler(client, 'stream')).getInterface();
+let middleware = (0, _stremioAddonSdk.getRouter)(addon);
 
 let server = _http.default.createServer((req, res) => {
   (0, _serveStatic.default)(STATIC_DIR)(req, res, () => {
-    addon.middleware(req, res, () => res.end());
+    middleware(req, res, () => res.end());
   });
 });
 
+if (IS_PROD) {
+  /* eslint-disable no-console */
+  console.log(_chalk.default.green(`Publishing to Stremio central: ${ENDPOINT}/manifest.json`));
+  (0, _stremioAddonSdk.publishToCentral)(`${ENDPOINT}/manifest.json`);
+}
+
 server.on('listening', () => {
   let values = {
-    endpoint: _chalk.default.green(MANIFEST.endpoint),
+    endpoint: _chalk.default.green(`${ENDPOINT}/manifest.json`),
     id: ID === DEFAULT_ID ? _chalk.default.red(ID) : _chalk.default.green(ID),
     email: EMAIL ? _chalk.default.green(EMAIL) : _chalk.default.red('undefined'),
     env: IS_PROD ? _chalk.default.green('production') : _chalk.default.green('development'),
