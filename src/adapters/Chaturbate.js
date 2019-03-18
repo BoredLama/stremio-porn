@@ -14,6 +14,7 @@ class Chaturbate extends BaseAdapter {
   static DISPLAY_NAME = 'Chaturbate'
   static SUPPORTED_TYPES = SUPPORTED_TYPES
   static ITEMS_PER_PAGE = ITEMS_PER_PAGE
+  static GENRES = []
 
   _normalizeItem(item) {
     return super._normalizeItem({
