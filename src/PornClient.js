@@ -112,11 +112,11 @@ class PornClient {
       throw new Error('Couldn\'t find suitable adapters for a request')
     }
     if (resourceName === 'catalog') {
-      return { metas: await this._invokeAdapterMethod(adapterImpl, 'find', request) }
+      return { metas: await this._invokeAdapterMethod(adapterImpl, 'find', request), cacheMaxAge: 3600 }
     } else if (resourceName === 'meta') {
-      return { meta: (await this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0] }
+      return { meta: (await this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0], cacheMaxAge: 300 }
     } else if (resourceName === 'stream') {
-      return { streams: await this._invokeAdapterMethod(adapterImpl, 'getStreams', request) }
+      return { streams: await this._invokeAdapterMethod(adapterImpl, 'getStreams', request), cacheMaxAge: 300 }
     } else {
       throw new Error(`Invalid resourceName: ${resourceName}`)
     }
@@ -130,8 +130,7 @@ class PornClient {
     }
 
     if (this.cache) {
-      // @TODO more for search
-      let cacheTtl = 300
+      let cacheTtl = args.extra.search ? 3600 : 300
       let cacheKey = CACHE_PREFIX + JSON.stringify({ resourceName, args })
       let cacheOptions = {
         ttl: cacheTtl,
