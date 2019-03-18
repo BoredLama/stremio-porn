@@ -83,7 +83,7 @@
     "http-proxy-agent": "^2.1.0",
     "https-proxy-agent": "^2.2.1",
     "serve-static": "^1.13.2",
-    "stremio-addon-sdk": "^1.1.4",
+    "stremio-addon-sdk": "^1.1.5",
     "xml-js": "^1.6.2"
   }
 }
