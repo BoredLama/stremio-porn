@@ -4,6 +4,7 @@ import HubTrafficAdapter from './HubTrafficAdapter'
 class YouPorn extends HubTrafficAdapter {
   static DISPLAY_NAME = 'YouPorn'
   static ITEMS_PER_PAGE = 29
+  static GENRES = ['straight', 'milf', 'asian', 'ebony', 'latina', 'arab', 'hentai', 'babysitter', 'anal', 'orgy', 'public', 'gay']
 
   _makeMethodUrl(method) {
     let methodAliases = {
