@@ -130,7 +130,7 @@ class PornClient {
     }
 
     if (this.cache) {
-      let cacheTtl = args.extra.search ? 3600 : 300
+      let cacheTtl = resourceName == 'catalog' ? 3600 : 300
       let cacheKey = CACHE_PREFIX + JSON.stringify({ resourceName, args })
       let cacheOptions = {
         ttl: cacheTtl,
