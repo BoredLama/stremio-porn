@@ -80,11 +80,6 @@ class PornClient {
   }
 
   async _invokeAdapterMethod(adapter, method, request) {
-    console.log('adapter: ')
-    console.log(adapter)
-    console.log('method: ' + method)
-    console.log('request: ')
-    console.log(request)
     let results = await adapter[method](request)
     return results.map((result) => {
       return normalizeResult(adapter, result)
