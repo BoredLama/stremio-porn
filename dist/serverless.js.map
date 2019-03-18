@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/serverless.js"],"names":["httpHandler","require","module","exports"],"mappings":";;AACA,MAAMA,cAAcC,QAAQ,YAAR,CAApB;;AAEAC,OAAOC,OAAP,GAAiBH,WAAjB","sourcesContent":["\nconst httpHandler = require('./index.js')\n\nmodule.exports = httpHandler\n"],"file":"serverless.js"}
