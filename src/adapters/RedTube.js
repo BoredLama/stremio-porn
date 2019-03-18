@@ -5,6 +5,7 @@ class RedTube extends HubTrafficAdapter {
   static DISPLAY_NAME = 'RedTube'
   static TAGS_TO_SKIP = ['teens'] // For some reason Teens doesn't work properly
   static ITEMS_PER_PAGE = 20
+  static GENRES = ['milf', 'asian', 'ebony', 'latina', 'arab', 'hentai', 'babysitter', 'anal', 'orgy', 'public', 'gay']
 
   _makeMethodUrl(method) {
     return `https://api.redtube.com?data=redtube.Videos.${method}`
