@@ -5,6 +5,7 @@ const androidUA = 'Mozilla/5.0 (Linux; Android 8.0.0; TA-1053 Build/OPR1.170623.
 class SpankWire extends HubTrafficAdapter {
   static DISPLAY_NAME = 'SpankWire'
   static ITEMS_PER_PAGE = 20
+  static GENRES = ['milf', 'asian', 'ebony', 'latina', 'hentai', 'babysitter', 'anal', 'public', 'gay']
 
   _makeMethodUrl(method) {
     return `https://www.spankwire.com/api/HubTrafficApiCall?data=${method}`
