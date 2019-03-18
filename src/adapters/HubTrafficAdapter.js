@@ -28,7 +28,7 @@ class HubTrafficAdapter extends BaseAdapter {
       releaseInfo: video.publish_date && video.publish_date.split('-')[0],
       website: video.url,
       description: video.url,
-      runtime: video.duration
+      runtime: video.duration,
     })
   }
 
@@ -89,7 +89,7 @@ class HubTrafficAdapter extends BaseAdapter {
   async _findByPage(query, page) {
     let { ITEMS_PER_PAGE } = this.constructor
     let newQuery = {
-      'tags[]': query.genre,
+      'tags[]': !query.genre && !query.search ? 'teen' : query.genre,
       search: query.search,
       period: 'weekly',
       ordering: 'mostviewed',
