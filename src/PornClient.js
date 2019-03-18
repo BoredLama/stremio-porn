@@ -11,47 +11,21 @@ import Chaturbate from './adapters/Chaturbate'
 // EPorner has restricted video downloads to 30 per day per guest
 // import EPorner from './adapters/EPorner'
 
-
 const ID = 'porn_id'
-const SORT_PROP_PREFIX = 'popularities.porn.'
 const CACHE_PREFIX = 'stremio-porn|'
 // Making multiple requests to multiple adapters for different types
 // and then aggregating them is a lot of work,
 // so we only support 1 adapter per request for now.
-const MAX_ADAPTERS_PER_REQUEST = 1
 const ADAPTERS = [PornHub, RedTube, YouPorn, SpankWire, PornCom, Chaturbate]
-const SORTS = ADAPTERS.map(({ name, DISPLAY_NAME, SUPPORTED_TYPES }) => ({
-  name: `Porn: ${DISPLAY_NAME}`,
-  prop: `${SORT_PROP_PREFIX}${name}`,
-  types: SUPPORTED_TYPES,
-}))
-const METHODS = {
-  'stream.find': {
-    adapterMethod: 'getStreams',
-    cacheTtl: 300,
-    idProp: ID,
-    expectsArray: true,
-  },
-  'meta.find': {
-    adapterMethod: 'find',
-    cacheTtl: 300,
-    idProp: 'id',
-    expectsArray: true,
-  },
-  'meta.search': {
-    adapterMethod: 'find',
-    cacheTtl: 3600,
-    idProp: 'id',
-    expectsArray: true,
-  },
-  'meta.get': {
-    adapterMethod: 'getItem',
-    cacheTtl: 300,
-    idProp: 'id',
-    expectsArray: false,
-  },
-}
-
+const CATALOGS = ADAPTERS.map(({ name, DISPLAY_NAME, SUPPORTED_TYPES, GENRES }) => {
+  return SUPPORTED_TYPES.map((type) => ({
+    type,
+    id: makePornId(name, type, 'top'),
+    name: `Porn: ${DISPLAY_NAME}`,
+    genres: GENRES,
+    extra: [{ name: 'search' }, { name: 'genre' }],
+  }))
+}).reduce((a, b) => a.concat(b), [])
 
 function makePornId(adapter, type, id) {
   return `${ID}:${adapter}-${type}-${id}`
@@ -62,66 +36,18 @@ function parsePornId(pornId) {
   return { adapter, type, id }
 }
 
-function normalizeRequest(request) {
-  let { query, sort, limit, skip } = request
-  let adapters = []
-
-  if (sort) {
-    adapters = Object.keys(sort)
-      .filter((p) => p.startsWith(SORT_PROP_PREFIX))
-      .map((p) => p.slice(SORT_PROP_PREFIX.length))
-  }
-
-  if (typeof query === 'string') {
-    query = { search: query }
-  } else if (query) {
-    query = { ...query }
-  } else {
-    query = {}
-  }
-
-  if (query.porn_id) {
-    let { adapter, type, id } = parsePornId(query.porn_id)
-
-    if (type && query.type && type !== query.type) {
-      throw new Error(
-        `Request query and porn_id types do not match (${type}, ${query.type})`
-      )
-    }
-
-    if (adapters.length && !adapters.includes(adapter)) {
-      throw new Error(
-        `Request sort and porn_id adapters do not match (${adapter})`
-      )
-    }
-
-    adapters = [adapter]
-    query.type = type
-    query.id = id
-  }
-
-  return { query, adapters, skip, limit }
-}
-
-function normalizeResult(adapter, item, idProp = 'id') {
+function normalizeResult(adapter, item) {
   let newItem = { ...item }
-  newItem[idProp] = makePornId(adapter.constructor.name, item.type, item.id)
+  if (item.id) {
+    newItem.id = makePornId(adapter.constructor.name, item.type, item.id)
+  }
   return newItem
 }
-
-function mergeResults(results) {
-  // TODO: limit
-  return results.reduce((results, adapterResults) => {
-    results.push(...adapterResults)
-    return results
-  }, [])
-}
-
 
 class PornClient {
   static ID = ID
   static ADAPTERS = ADAPTERS
-  static SORTS = SORTS
+  static CATALOGS = CATALOGS
 
   constructor(options) {
     let httpClient = new HttpClient(options)
@@ -137,16 +63,12 @@ class PornClient {
     }
   }
 
-  _getAdaptersForRequest(request) {
-    let { query, adapters } = request
-    let { type } = query
+  _getAdapterForRequest(adapterName, type) {
     let matchingAdapters = this.adapters
 
-    if (adapters.length) {
-      matchingAdapters = matchingAdapters.filter((adapter) => {
-        return adapters.includes(adapter.constructor.name)
-      })
-    }
+    matchingAdapters = matchingAdapters.filter((adapter) => {
+      return adapterName === adapter.constructor.name
+    })
 
     if (type) {
       matchingAdapters = matchingAdapters.filter((adapter) => {
@@ -154,55 +76,69 @@ class PornClient {
       })
     }
 
-    return matchingAdapters.slice(0, MAX_ADAPTERS_PER_REQUEST)
+    return matchingAdapters[0]
   }
 
-  async _invokeAdapterMethod(adapter, method, request, idProp) {
+  async _invokeAdapterMethod(adapter, method, request) {
+    console.log('adapter: ')
+    console.log(adapter)
+    console.log('method: ' + method)
+    console.log('request: ')
+    console.log(request)
     let results = await adapter[method](request)
     return results.map((result) => {
-      return normalizeResult(adapter, result, idProp)
+      return normalizeResult(adapter, result)
     })
   }
 
   // Aggregate method that dispatches requests to matching adapters
-  async _invokeMethod(methodName, rawRequest, idProp) {
-    let request = normalizeRequest(rawRequest)
-    let adapters = this._getAdaptersForRequest(request)
+  async _retrieveResource(resourceName, args) {
+    let { adapter, id } = parsePornId(args.id)
+    let request = {
+      query: { type: args.type, id },
+    }
+    if (!isNaN(args.extra.skip)) {
+      request.skip = parseInt(args.extra.skip, 10)
+    }
+    if (args.extra.search) {
+      request.query.search = args.extra.search
+    }
+    if (args.extra.genre) {
+      request.query.genre = args.extra.genre
+    }
 
-    if (!adapters.length) {
+    let adapterImpl = this._getAdapterForRequest(adapter, args.type)
+    if (!adapterImpl) {
       throw new Error('Couldn\'t find suitable adapters for a request')
     }
-
-    let results = []
-
-    for (let adapter of adapters) {
-      let adapterResults = await this._invokeAdapterMethod(
-        adapter, methodName, request, idProp
-      )
-      results.push(adapterResults)
+    if (resourceName === 'catalog') {
+      return { metas: await this._invokeAdapterMethod(adapterImpl, 'find', request) }
+    } else if (resourceName === 'meta') {
+      return { meta: (await this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0] }
+    } else if (resourceName === 'stream') {
+      return { streams: await this._invokeAdapterMethod(adapterImpl, 'getStreams', request) }
+    } else {
+      throw new Error(`Invalid resourceName: ${resourceName}`)
     }
-
-    return mergeResults(results, request.limit)
   }
 
   // This is a public wrapper around the private method
   // that implements caching and result normalization
-  async invokeMethod(methodName, rawRequest) {
-    let { adapterMethod, cacheTtl, idProp, expectsArray } = METHODS[methodName]
-    let invokeMethod = async () => {
-      let result = await this._invokeMethod(adapterMethod, rawRequest, idProp)
-      result = expectsArray ? result : result[0]
-      return result
+  async invokeResource(resourceName, args) {
+    let invokeResource = async () => {
+      return this._retrieveResource(resourceName, args)
     }
 
     if (this.cache) {
-      let cacheKey = CACHE_PREFIX + JSON.stringify(rawRequest)
+      // @TODO more for search
+      let cacheTtl = 300
+      let cacheKey = CACHE_PREFIX + JSON.stringify({ resourceName, args })
       let cacheOptions = {
         ttl: cacheTtl,
       }
-      return this.cache.wrap(cacheKey, invokeMethod, cacheOptions)
+      return this.cache.wrap(cacheKey, invokeResource, cacheOptions)
     } else {
-      return invokeMethod()
+      return invokeResource()
     }
   }
 }
