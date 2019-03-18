@@ -115,11 +115,6 @@ class PornClient {
 
   _invokeAdapterMethod(adapter, method, request) {
     return _asyncToGenerator(function* () {
-      console.log('adapter: ');
-      console.log(adapter);
-      console.log('method: ' + method);
-      console.log('request: ');
-      console.log(request);
       let results = yield adapter[method](request);
       return results.map(result => {
         return normalizeResult(adapter, result);
@@ -163,15 +158,18 @@ class PornClient {
 
       if (resourceName === 'catalog') {
         return {
-          metas: yield _this._invokeAdapterMethod(adapterImpl, 'find', request)
+          metas: yield _this._invokeAdapterMethod(adapterImpl, 'find', request),
+          cacheMaxAge: 3600
         };
       } else if (resourceName === 'meta') {
         return {
-          meta: (yield _this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0]
+          meta: (yield _this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0],
+          cacheMaxAge: 300
         };
       } else if (resourceName === 'stream') {
         return {
-          streams: yield _this._invokeAdapterMethod(adapterImpl, 'getStreams', request)
+          streams: yield _this._invokeAdapterMethod(adapterImpl, 'getStreams', request),
+          cacheMaxAge: 300
         };
       } else {
         throw new Error(`Invalid resourceName: ${resourceName}`);
@@ -198,8 +196,7 @@ class PornClient {
       }();
 
       if (_this2.cache) {
-        // @TODO more for search
-        let cacheTtl = 300;
+        let cacheTtl = resourceName == 'catalog' ? 3600 : 300;
         let cacheKey = CACHE_PREFIX + JSON.stringify({
           resourceName,
           args
