@@ -20,6 +20,7 @@ class PornCom extends BaseAdapter {
   static DISPLAY_NAME = 'Porn.com'
   static SUPPORTED_TYPES = SUPPORTED_TYPES
   static ITEMS_PER_PAGE = ITEMS_PER_PAGE
+  static GENRES = ['milf', 'asian', 'gay']
 
   _normalizeItem(item) {
     return super._normalizeItem({
