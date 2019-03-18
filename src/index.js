@@ -1,19 +1,20 @@
 import http from 'http'
-import Stremio from 'stremio-addons'
+import { addonBuilder as AddonBuilder, getRouter, publishToCentral } from 'stremio-addon-sdk'
 import serveStatic from 'serve-static'
 import chalk from 'chalk'
 import pkg from '../package.json'
 import PornClient from './PornClient'
 
+// @TODO adapt methods (stream.find, meta.find, ...)
+// @TODO serveStatic not needed
+// @TODO search
+// @TODO landing
 
-const SUPPORTED_METHODS = [
-  'stream.find', 'meta.find', 'meta.search', 'meta.get',
-]
 const STATIC_DIR = 'static'
 const DEFAULT_ID = 'stremio_porn'
 
 const ID = process.env.STREMIO_PORN_ID || DEFAULT_ID
-const ENDPOINT = process.env.STREMIO_PORN_ENDPOINT || 'http://localhost'
+const ENDPOINT = process.env.STREMIO_PORN_ENDPOINT || 'https://stremio-porn.now.sh'
 const PORT = process.env.STREMIO_PORN_PORT || process.env.PORT || '80'
 const PROXY = process.env.STREMIO_PORN_PROXY || process.env.HTTPS_PROXY
 const CACHE = process.env.STREMIO_PORN_CACHE || process.env.REDIS_URL || '1'
@@ -34,79 +35,69 @@ if (IS_PROD && ID === DEFAULT_ID) {
 let availableSites = PornClient.ADAPTERS.map((a) => a.DISPLAY_NAME).join(', ')
 
 const MANIFEST = {
-  name: 'Porn',
+  name: 'Porn+',
   id: ID,
   version: pkg.version,
   description: `\
 Time to unsheathe your sword! \
 Watch porn videos and webcam streams from ${availableSites}\
 `,
+  resources: ['catalog', 'meta', 'stream'],
   types: ['movie', 'tv'],
-  idProperty: PornClient.ID,
-  dontAnnounce: !IS_PROD,
-  sorts: PornClient.SORTS,
-  // The docs mention `contactEmail`, but the template uses `email`
-  email: EMAIL,
+  idPrefixes: [PornClient.ID],
+  catalogs: PornClient.CATALOGS,
   contactEmail: EMAIL,
-  endpoint: `${ENDPOINT}/stremioget/stremio/v1`,
   logo: `${ENDPOINT}/logo.png`,
   icon: `${ENDPOINT}/logo.png`,
   background: `${ENDPOINT}/bg.jpg`,
-  // OBSOLETE: used in pre-4.0 stremio instead of idProperty/types
-  filter: {
-    [`query.${PornClient.ID}`]: { $exists: true },
-    'query.type': { $in: ['movie', 'tv'] },
-  },
+  behaviorHints: { adult: true },
 }
 
-
-function makeMethod(client, methodName) {
-  return async (request, cb) => {
-    let response
-    let error
-
+function makeResourceHandler(client, resourceName) {
+  return async (args) => {
     try {
-      response = await client.invokeMethod(methodName, request)
+      let response = await client.invokeResource(resourceName, args)
+      return response
     } catch (err) {
-      error = err
-
       /* eslint-disable no-console */
       console.error(
         // eslint-disable-next-line prefer-template
         chalk.gray(new Date().toLocaleString()) +
         ' An error has occurred while processing ' +
-        `the following request to ${methodName}:`
+        `the following request to ${resourceName}:`
       )
-      console.error(request)
+      console.error(args)
       console.error(err)
       /* eslint-enable no-console */
+      throw err
     }
-
-    cb(error, response)
   }
 }
 
-function makeMethods(client, methodNames) {
-  return methodNames.reduce((methods, methodName) => {
-    methods[methodName] = makeMethod(client, methodName)
-    return methods
-  }, {})
-}
-
-
 let client = new PornClient({ proxy: PROXY, cache: CACHE })
-let methods = makeMethods(client, SUPPORTED_METHODS)
-let addon = new Stremio.Server(methods, MANIFEST)
+let addon = new AddonBuilder(MANIFEST)
+  .defineCatalogHandler(makeResourceHandler(client, 'catalog'))
+  .defineMetaHandler(makeResourceHandler(client, 'meta'))
+  .defineStreamHandler(makeResourceHandler(client, 'stream'))
+  .getInterface()
+let middleware = getRouter(addon)
 let server = http.createServer((req, res) => {
   serveStatic(STATIC_DIR)(req, res, () => {
-    addon.middleware(req, res, () => res.end())
+    middleware(req, res, () => res.end())
   })
 })
+if (IS_PROD) {
+  /* eslint-disable no-console */
+  console.log(
+    chalk.green(`Publishing to Stremio central: ${ENDPOINT}/manifest.json`)
+  )
+  publishToCentral(`${ENDPOINT}/manifest.json`)
+}
 
 server
   .on('listening', () => {
     let values = {
-      endpoint: chalk.green(MANIFEST.endpoint),
+      endpoint: chalk.green(`${ENDPOINT}/manifest.json`),
       id: ID === DEFAULT_ID ? chalk.red(ID) : chalk.green(ID),
       email: EMAIL ? chalk.green(EMAIL) : chalk.red('undefined'),
       env: IS_PROD ? chalk.green('production') : chalk.green('development'),
