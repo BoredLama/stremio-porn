@@ -152,7 +152,7 @@ class PornCom extends _BaseAdapter.default {
 
 }
 
-_defineProperty(_defineProperty(_defineProperty(PornCom, "DISPLAY_NAME", 'Porn.com'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE);
+_defineProperty(_defineProperty(_defineProperty(_defineProperty(PornCom, "DISPLAY_NAME", 'Porn.com'), "SUPPORTED_TYPES", SUPPORTED_TYPES), "ITEMS_PER_PAGE", ITEMS_PER_PAGE), "GENRES", ['milf', 'asian', 'gay']);
 
 var _default = PornCom;
 exports.default = _default;

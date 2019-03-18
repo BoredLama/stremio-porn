@@ -58,7 +58,7 @@ class YouPorn extends _HubTrafficAdapter.default {
 
 }
 
-_defineProperty(_defineProperty(YouPorn, "DISPLAY_NAME", 'YouPorn'), "ITEMS_PER_PAGE", 29);
+_defineProperty(_defineProperty(_defineProperty(YouPorn, "DISPLAY_NAME", 'YouPorn'), "ITEMS_PER_PAGE", 29), "GENRES", ['straight', 'milf', 'asian', 'ebony', 'latina', 'arab', 'hentai', 'babysitter', 'anal', 'orgy', 'public', 'gay']);
 
 var _default = YouPorn;
 exports.default = _default;

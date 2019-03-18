@@ -52,7 +52,7 @@ class RedTube extends _HubTrafficAdapter.default {
 
 }
 
-_defineProperty(_defineProperty(_defineProperty(RedTube, "DISPLAY_NAME", 'RedTube'), "TAGS_TO_SKIP", ['teens']), "ITEMS_PER_PAGE", 20);
+_defineProperty(_defineProperty(_defineProperty(_defineProperty(RedTube, "DISPLAY_NAME", 'RedTube'), "TAGS_TO_SKIP", ['teens']), "ITEMS_PER_PAGE", 20), "GENRES", ['milf', 'asian', 'ebony', 'latina', 'arab', 'hentai', 'babysitter', 'anal', 'orgy', 'public', 'gay']);
 
 var _default = RedTube;
 exports.default = _default;
