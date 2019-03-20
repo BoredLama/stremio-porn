@@ -1,11 +1,10 @@
 
-const DEFAULT_ID = 'stremio_porn'
+const DEFAULT_ID = 'stremio_porn_plus'
 
 class Config {
 
 	static DEFAULT_ID = DEFAULT_ID
 	static STATIC_DIR = 'static'
-	static DEFAULT_ID = 'stremio_porn'
 
 	static ID = process.env.STREMIO_PORN_ID || DEFAULT_ID
 	static ENDPOINT = process.env.STREMIO_PORN_ENDPOINT || 'https://stremio-porn.ga'
