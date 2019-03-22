@@ -107,7 +107,7 @@ class PornClient {
       throw new Error('Couldn\'t find suitable adapters for a request')
     }
     if (resourceName === 'catalog') {
-      return { metas: await this._invokeAdapterMethod(adapterImpl, 'find', request), cacheMaxAge: 3600 }
+      return { metas: await this._invokeAdapterMethod(adapterImpl, 'find', { limit: 100, ...request }), cacheMaxAge: 3600 }
     } else if (resourceName === 'meta') {
       return { meta: (await this._invokeAdapterMethod(adapterImpl, 'getItem', request))[0], cacheMaxAge: 300 }
     } else if (resourceName === 'stream') {
