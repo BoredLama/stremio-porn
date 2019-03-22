@@ -88,8 +88,9 @@ class HubTrafficAdapter extends BaseAdapter {
 
   async _findByPage(query, page) {
     let { ITEMS_PER_PAGE } = this.constructor
+    const filter = this.constructor.name == 'YouPorn' && !query.genre && !query.search ? 'teen' : query.genre
     let newQuery = {
-      'tags[]': !query.genre && !query.search ? 'teen' : query.genre,
+      'tags[]': filter,
       search: query.search,
       period: 'weekly',
       ordering: 'mostviewed',
