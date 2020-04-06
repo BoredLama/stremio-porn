@@ -38,7 +38,7 @@ const CACHE_PREFIX = 'stremio-porn|'; // Making multiple requests to multiple ad
 // and then aggregating them is a lot of work,
 // so we only support 1 adapter per request for now.
 
-const ADAPTERS = [_PornHub.default, _RedTube.default, _YouPorn.default, _SpankWire.default, _PornCom.default, _Chaturbate.default];
+const ADAPTERS = [_RedTube.default, _SpankWire.default, _Chaturbate.default];
 const CATALOGS = ADAPTERS.map(({
   name,
   DISPLAY_NAME,
@@ -158,7 +158,9 @@ class PornClient {
 
       if (resourceName === 'catalog') {
         return {
-          metas: yield _this._invokeAdapterMethod(adapterImpl, 'find', request),
+          metas: yield _this._invokeAdapterMethod(adapterImpl, 'find', _objectSpread({
+            limit: 100
+          }, request)),
           cacheMaxAge: 3600
         };
       } else if (resourceName === 'meta') {
