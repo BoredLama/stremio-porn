@@ -16,7 +16,7 @@ const CACHE_PREFIX = 'stremio-porn|'
 // Making multiple requests to multiple adapters for different types
 // and then aggregating them is a lot of work,
 // so we only support 1 adapter per request for now.
-const ADAPTERS = [RedTube, SpankWire, PornCom, Chaturbate]
+const ADAPTERS = [RedTube, SpankWire, Chaturbate]
 const CATALOGS = ADAPTERS.map(({ name, DISPLAY_NAME, SUPPORTED_TYPES, GENRES }) => {
   return SUPPORTED_TYPES.map((type) => ({
     type,
