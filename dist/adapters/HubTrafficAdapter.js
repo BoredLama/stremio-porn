@@ -104,8 +104,9 @@ class HubTrafficAdapter extends _BaseAdapter.default {
       let {
         ITEMS_PER_PAGE
       } = _this2.constructor;
+      const filter = _this2.constructor.name == 'YouPorn' && !query.genre && !query.search ? 'teen' : query.genre;
       let newQuery = {
-        'tags[]': !query.genre && !query.search ? 'teen' : query.genre,
+        'tags[]': filter,
         search: query.search,
         period: 'weekly',
         ordering: 'mostviewed',
