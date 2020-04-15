@@ -16,13 +16,13 @@ if (Config.IS_PROD && Config.ID === Config.DEFAULT_ID) {
   process.exit(1)
 }
 
-if (Config.IS_PROD) {
+//if (Config.IS_PROD) {
   /* eslint-disable no-console */
-  console.log(
-    chalk.green(`Publishing to Stremio central: ${Config.ENDPOINT}/manifest.json`)
-  )
-  publishToCentral(`${Config.ENDPOINT}/manifest.json`)
-}
+//  console.log(
+//    chalk.green(`Publishing to Stremio central: ${Config.ENDPOINT}/manifest.json`)
+//  )
+//  publishToCentral(`${Config.ENDPOINT}/manifest.json`)
+//}
 
 server
   .on('listening', () => {
