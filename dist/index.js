@@ -35,9 +35,9 @@ Watch porn videos and webcam streams from ${availableSites}\
   idPrefixes: [_PornClient.default.ID],
   catalogs: _PornClient.default.CATALOGS,
   contactEmail: _config.default.EMAIL,
-  logo: `${_config.default.ENDPOINT}/logo.png`,
-  icon: `${_config.default.ENDPOINT}/logo.png`,
-  background: `${_config.default.ENDPOINT}/bg.jpg`,
+  logo: `https://johnserv531.github.io/gh-images/1586345203.png`,
+  icon: `https://johnserv531.github.io/gh-images/1586345203.png`,
+  background: `https://johnserv531.github.io/gh-images/1586345196.jpg`,
   behaviorHints: {
     adult: true
   }

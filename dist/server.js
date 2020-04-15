@@ -21,13 +21,15 @@ if (_config.default.IS_PROD && _config.default.ID === _config.default.DEFAULT_ID
   // eslint-disable-next-line no-console
   console.error(_chalk.default.red('\nWhen running in production, a non-default addon identifier must be specified\n'));
   process.exit(1);
-}
+} //if (Config.IS_PROD) {
 
-if (_config.default.IS_PROD) {
-  /* eslint-disable no-console */
-  console.log(_chalk.default.green(`Publishing to Stremio central: ${_config.default.ENDPOINT}/manifest.json`));
-  publishToCentral(`${_config.default.ENDPOINT}/manifest.json`);
-}
+/* eslint-disable no-console */
+//  console.log(
+//    chalk.green(`Publishing to Stremio central: ${Config.ENDPOINT}/manifest.json`)
+//  )
+//  publishToCentral(`${Config.ENDPOINT}/manifest.json`)
+//}
+
 
 server.on('listening', () => {
   let values = {
